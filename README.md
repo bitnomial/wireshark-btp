@@ -1,5 +1,7 @@
 # BTP Wireshark Plugin
 
+A Wireshark plugin for the [Bitnomial Transfer Protocol (BTP)](https://bitnomial.com/docs/bitnomial-transfer-protocol/): a binary, low latency, direct market access, trading and market data protocol.
+
 ## Requirements
 
 - CMake >= 3.5 (>= 3.7 on 32 bit Windows)
