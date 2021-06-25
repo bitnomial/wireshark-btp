@@ -2,38 +2,21 @@
 
 A Wireshark plugin for the [Bitnomial Transfer Protocol (BTP)](https://bitnomial.com/docs/bitnomial-transfer-protocol/): a binary, low latency, direct market access, trading and market data protocol.
 
-## Requirements
+## Installation
 
-- CMake >= 3.5 (>= 3.7 on 32 bit Windows)
-- Python >= 3.4
-- Qt >= 5
+To install the BTP Wireshark plugin, copy `btp.lua` to the correct path for your operation system
 
+ - Windows users can copy the file to `%APPDATA%\Wireshark\plugins\` or `WIRESHARK\plugins\`, where WIRESHARK is their Wireshark installation location.
+ - Unix-like users can copy the file to `~/.local/lib/wireshark/plugins`
 
-## Building the Plugin
+More information is available [here](https://www.wireshark.org/docs/wsug_html_chunked/ChPluginsFolder.html).
 
-These instructions were made for MacOS.
+## Resources
 
-### Shake
+The following are resources which were useful for the development and maintenance of this plugin.
 
-Build the plugin to `.build/dist/x86_64-osx/btp.so`:
-
-```
-$ ./Shakefile.hs
-```
-
-Build and copy the `btp.so` file to a Wireshark 3.0.x installation:
-
-```
-$ ./Shakefile.hs install
-```
-
-Remove the `.build` directiory:
-
-```
-$ ./Shakefile.hs clean
-```
-
-
-## Filters
-
-You can filter BTP packets in Wireshark by using the tag `btp.[fieldName]`, e.g. `btp.authToken`. The fieldNames are exactly the same as the ones listed in Bitnomial Protocol docs.
+- [Lua documentation](https://www.lua.org/manual/5.4/)
+- [Wireshark Lua API reference](https://www.wireshark.org/docs/wsdg_html_chunked/wsluarm_modules.html)
+- [Wireshark wiki Lua article](https://gitlab.com/wireshark/wireshark/-/wikis/Lua)
+- [This step-by-step guide with examples](https://mika-s.github.io/wireshark/lua/dissector/2017/11/04/creating-a-wireshark-dissector-in-lua-1.html)
+- [This guide to heuristic dissectors](https://mika-s.github.io/wireshark/lua/dissector/2018/12/30/creating-port-independent-wireshark-dissectors-in-lua.html)
