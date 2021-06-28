@@ -352,11 +352,5 @@ local function heuristic_checker(buffer, pinfo, tree)
     return true
 end
 
--- TODO heuristic_checker and btp_proto.dissector can be 
--- refactored to reduce duplicated behavior, for efficiency and
--- maintainability. In particular, a dissect header function
--- can be introduced that gets the relevant fields and populates
--- tree in one go
-
 -- register our heuristic checker
 btp_proto:register_heuristic("tcp", heuristic_checker)
