@@ -46,22 +46,20 @@ bids_length = ProtoField.uint64("btp.bids_length", "Bids Length")
 bid_levels = ProtoField.bytes("btp.bid_levels", "Bid Levels")
 asks_length = ProtoField.uint64("btp.asks_length", "Asks Length")
 ask_levels = ProtoField.bytes("btp.ask_levels", "Ask Levels")
-
--- TODO populate the following field variables
-order_id
-account_id_len
-account_id
-cti_type
-firm_name_len
-firm_name
-firm_type
-user_memo_len
-user_memo
-modify_id
-old_price
-old_quantity
-filled_quantity
-liquidity
+order_id = ProtoField.uint64("btp.order_id", "Order ID")
+account_id_len = ProtoField.uint8("btp.account_id_len", "Account ID Length", base.DEC)
+account_id = ProtoField.string("btp.account_id", "Account ID", base.ASCII)
+cti_type = ProtoField.uint8("btp.cti_type", "CTI Type", base.DEC)
+firm_name_len = ProtoField.uint8("btp.firm_name_len", "Firm Name Length", base.DEC)
+firm_name = ProtoField.string("btp.firm_name", "Firm Name", base.ASCII)
+firm_type = ProtoField.string("btp.firm_type", "Firm Type", base.ASCII)
+user_memo_len = ProtoField.uint8("btp.user_memo_len", "User Memo Length", base.DEC)
+user_memo = ProtoField.string("btp.user_memo", "User Memo", base.ASCII)
+modify_id = ProtoField.uint64("btp.modify_id", "Modify ID", base.DEC)
+old_price = ProtoField.int32("btp.old_price", "Old Price", base.DEC)
+old_quantity = ProtoField.uint32("btp.old_quantity", "Old Quantity", base.DEC)
+filled_quantity = ProtoField.uint32("btp.filled_quantity", "Filled Quantity", base.DEC)
+liquidity = ProtoField.string("btp.liquidity", "Liquidity", base.ASCII)
 
 function dissect_order_entry(buffer, pinfo, tree)
     -- TODO
@@ -205,7 +203,7 @@ function dissect_market_state(buffer, pinfo, tree)
 end
 
 function dissect_heartbeat(buffer, pinfo, tree)
-    -- stub
+    -- this function intentionally left blank
 end
 
 function dissect_disconnect(buffer, pinfo, tree)
@@ -276,6 +274,10 @@ local function heuristic_checker(buffer, pinfo, tree)
     protocol = buffer:range(0, 2):string()
     if protocol ~= "BT" then return false end
 
+    -- ensure that the protocol version is version 2
+    version = buffer:range(2, 2):uint16()
+    if protocol ~= 2 then return false end
+
     -- ensure that the body encoding is valid
     encoding = buffer:range(8, 2):string()
     if body_dissectors[encoding] == nil then return false end
@@ -284,6 +286,12 @@ local function heuristic_checker(buffer, pinfo, tree)
     btp_proto.dissector(buffer, pinfo, tree)
     return true
 end
+
+-- TODO heuristic_checker and btp_proto.dissector can be 
+-- refactored to reduce duplicated behavior, for efficiency and
+-- maintainability. In particular, a dissect header function
+-- can be introduced that gets the relevant fields and populates
+-- tree in one go
 
 -- register our heuristic checker
 btp_proto:register_heuristic("tcp", heuristic_checker)
