@@ -8,10 +8,31 @@ disconnect_reason_string = {
     [0x05] = "Failed to parse message"
 }
 
-reject_reason_string = {
+login_reject_reason_string = {
     [0x01] = "Not logged in",
     [0x02] = "Unauthorized",
     [0x03] = "Already logged in"
+}
+
+order_entry_reject_reason_string = {
+    [0x01] = "Account not found",
+    [0x02] = "Product not found",
+    [0x03] = "Order not found",
+    [0x04] = "Order already exists",
+    [0x05] = "Order already closed",
+    [0x06] = "Order not changed by modify",
+    [0x07] = "Quantity greater than max order size",
+    [0x08] = "Quantity less than min order size",
+    [0x09] = "Price outside price bands",
+    [0x0A] = "Price outside price limits",
+    [0x0B] = "Price not tick aligned (reserved)",
+    [0x0C] = "Market halted. Only close requests accepted",
+    [0x0D] = "Market closed. No requests accepted",
+    [0x0E] = "Give-up account not found",
+    [0x0F] = "Give-up unauthorized",
+    [0x10] = "Messaging rate exceeded",
+    [0x11] = "Position limit exceeded",
+    [0x12] = "Connection disabled"
 }
 
 protocol_id = ProtoField.string("btp.protocol_id", "Protocol ID", base.ASCII)
@@ -35,8 +56,9 @@ auth_token = ProtoField.bytes("btp.auth_token", "Auth Token")
 heartbeat_interval = ProtoField.uint8("btp.heartbeat_interval",
                                       "Heartbeat Interval")
 persist_orders = ProtoField.char("btp.persist_orders", "Persist Orders")
-reject_reason = ProtoField.uint8("btp.reject_reason", "Reject Reason", base.HEX,
-                                 reject_reason_string)
+login_reject_reason = ProtoField.uint8("btp.login.reject_reason",
+                                       "Reject Reason", base.HEX,
+                                       login_reject_reason_string)
 market_state = ProtoField.string("btp.market_state", "Market State", base.ASCII)
 ack_id = ProtoField.uint64("btp.ack_id", "Ack ID", base.DEC)
 side = ProtoField.string("btp.side", "Taker Side", base.ASCII)
@@ -64,9 +86,47 @@ old_quantity = ProtoField.uint32("btp.old_quantity", "Old Quantity", base.DEC)
 filled_quantity = ProtoField.uint32("btp.filled_quantity", "Filled Quantity",
                                     base.DEC)
 liquidity = ProtoField.string("btp.liquidity", "Liquidity", base.ASCII)
+close_reason = ProtoField.string("btp.close_reason", "Close Reason", base.ASCII)
+order_entry_reject_reason = ProtoField.uint8("btp.order_entry.reject_reason",
+                                             "Reject Reason", base.HEX,
+                                             order_entry_reject_reason_string)
+time_in_force = ProtoField.string("btp.time_in_force", "Time in Force",
+                                  base.ASCII)
 
 function dissect_order_entry(buffer, pinfo, tree)
-    -- TODO
+    tree:add_le(message_type, buffer:range(0, 1))
+    mt = buffer:range(0, 1):string()
+    if mt == "O" then
+        tree:add_le(order_id, buffer:range(1, 8))
+        tree:add_le(product_id, buffer:range(9, 8))
+        tree:add_le(side, buffer:range(17, 1))
+        tree:add_le(price, buffer:range(18, 4))
+        tree:add_le(quantity, buffer:range(22, 4))
+        tree:add_le(time_in_force, buffer:range(26, 1))
+    elseif mt == "M" then
+        tree:add_le(order_id, buffer:range(1, 8))
+        tree:add_le(modify_id, buffer:range(9, 8))
+        tree:add_le(price, buffer:range(17, 4))
+        tree:add_le(quantity, buffer:range(21, 4))
+    elseif mt == "A" then
+        tree:add_le(ack_id, buffer:range(1, 8))
+        tree:add_le(order_id, buffer:range(9, 8))
+        tree:add_le(modify_id, buffer:range(17, 8))
+    elseif mt == "R" then
+        tree:add_le(order_id, buffer:range(1, 8))
+        tree:add_le(modify_id, buffer:range(9, 8))
+        tree:add_le(order_entry_reject_reason, buffer:range(17, 1))
+    elseif mt == "C" then
+        tree:add_le(ack_id, buffer:range(1, 8))
+        tree:add_le(order_id, buffer:range(9, 8))
+        tree:add_le(close_reason, buffer:range(17, 1))
+    elseif mt == "F" then
+        tree:add_le(ack_id, buffer:range(1, 8))
+        tree:add_le(order_id, buffer:range(9, 8))
+        tree:add_le(price, buffer:range(17, 4))
+        tree:add_le(quantity, buffer:range(21, 4))
+        tree:add_le(liquidity, buffer:range(25, 1))
+    end
 end
 
 function dissect_drop_copy(buffer, pinfo, tree)
@@ -197,7 +257,7 @@ function dissect_login(buffer, pinfo, tree)
     elseif mt == "A" then
         -- stub
     elseif mt == "R" then
-        tree:add_le(reject_reason, buffer:range(1, 1))
+        tree:add_le(login_reject_reason, buffer:range(1, 1))
     end
 end
 
@@ -234,13 +294,14 @@ end
 
 -- List of BTP fields
 btp_proto.fields = {
-    -- Header fields
-    protocol_id, version, sequence_id, body_encoding, body_length,
-    -- Disconnect fields
-    disconnect_reason, expected_sequence_id, actual_sequence_id,
-    -- Login fields
-    message_type, connection_id, auth_token, heartbeat_interval, persist_orders,
-    reject_reason
+    protocol_id, version, sequence_id, body_encoding, body_length, message_type,
+    product_id, disconnect_reason, expected_sequence_id, actual_sequence_id,
+    connection_id, auth_token, heartbeat_interval, persist_orders,
+    login_reject_reason, market_state, ack_id, side, price, quantity,
+    bids_length, bid_levels, asks_length, ask_levels, order_id, account_id_len,
+    account_id, cti_type, firm_name_len, firm_name, firm_type, user_memo_len,
+    user_memo, modify_id, old_price, old_quantity, filled_quantity, liquidity,
+    close_reason, order_entry_reject_reason, time_in_force
 }
 
 -- This function dissects BTP packets
@@ -278,9 +339,9 @@ local function heuristic_checker(buffer, pinfo, tree)
     protocol = buffer:range(0, 2):string()
     if protocol ~= "BT" then return false end
 
-    -- ensure that the protocol version is version 2
-    version = buffer:range(2, 2):uint16()
-    if protocol ~= 2 then return false end
+    -- ensure that the protocol version is version 1
+    -- version = buffer:range(2, 2):le_uint16()
+    -- if version ~= 1 then return false end
 
     -- ensure that the body encoding is valid
     encoding = buffer:range(8, 2):string()
