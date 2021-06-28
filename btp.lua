@@ -47,18 +47,22 @@ bid_levels = ProtoField.bytes("btp.bid_levels", "Bid Levels")
 asks_length = ProtoField.uint64("btp.asks_length", "Asks Length")
 ask_levels = ProtoField.bytes("btp.ask_levels", "Ask Levels")
 order_id = ProtoField.uint64("btp.order_id", "Order ID")
-account_id_len = ProtoField.uint8("btp.account_id_len", "Account ID Length", base.DEC)
+account_id_len = ProtoField.uint8("btp.account_id_len", "Account ID Length",
+                                  base.DEC)
 account_id = ProtoField.string("btp.account_id", "Account ID", base.ASCII)
 cti_type = ProtoField.uint8("btp.cti_type", "CTI Type", base.DEC)
-firm_name_len = ProtoField.uint8("btp.firm_name_len", "Firm Name Length", base.DEC)
+firm_name_len = ProtoField.uint8("btp.firm_name_len", "Firm Name Length",
+                                 base.DEC)
 firm_name = ProtoField.string("btp.firm_name", "Firm Name", base.ASCII)
 firm_type = ProtoField.string("btp.firm_type", "Firm Type", base.ASCII)
-user_memo_len = ProtoField.uint8("btp.user_memo_len", "User Memo Length", base.DEC)
+user_memo_len = ProtoField.uint8("btp.user_memo_len", "User Memo Length",
+                                 base.DEC)
 user_memo = ProtoField.string("btp.user_memo", "User Memo", base.ASCII)
 modify_id = ProtoField.uint64("btp.modify_id", "Modify ID", base.DEC)
 old_price = ProtoField.int32("btp.old_price", "Old Price", base.DEC)
 old_quantity = ProtoField.uint32("btp.old_quantity", "Old Quantity", base.DEC)
-filled_quantity = ProtoField.uint32("btp.filled_quantity", "Filled Quantity", base.DEC)
+filled_quantity = ProtoField.uint32("btp.filled_quantity", "Filled Quantity",
+                                    base.DEC)
 liquidity = ProtoField.string("btp.liquidity", "Liquidity", base.ASCII)
 
 function dissect_order_entry(buffer, pinfo, tree)
