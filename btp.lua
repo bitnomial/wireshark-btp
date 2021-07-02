@@ -65,6 +65,35 @@ local time_in_force_string = {
     [string.byte("I")] = "IOC"
 }
 
+local order_entry_message_type_string = {
+    [string.byte("O")] = "Open",
+    [string.byte("M")] = "Modify",
+    [string.byte("A")] = "Ack",
+    [string.byte("R")] = "Reject",
+    [string.byte("C")] = "Closed",
+    [string.byte("F")] = "Fill"
+}
+
+local drop_copy_message_type_string = {
+    [string.byte("O")] = "Open Ack",
+    [string.byte("M")] = "Modify Ack",
+    [string.byte("F")] = "Fill",
+    [string.byte("C")] = "Close"
+}
+
+local price_feed_message_type_string = {
+    [string.byte("T")] = "Trade",
+    [string.byte("L")] = "Level",
+    [string.byte("B")] = "Book"
+}
+
+local login_message_type_string = {
+    [string.byte("L")] = "Login",
+    [string.byte("K")] = "Logout",
+    [string.byte("A")] = "Ack",
+    [string.byte("R")] = "Reject"
+}
+
 local function be2int(be)
     if string.len(be) == 2 then
         local a = string.byte(be, 1)
@@ -95,8 +124,6 @@ local body_encoding = ProtoField.uint16("btp.body_encoding", "Body Encoding",
                                         base.HEX, body_encoding_string, nil, nil)
 local body_length = ProtoField.uint16("btp.body_length", "Body Length",
                                       base.DEC, nil, nil, nil)
-local message_type = ProtoField.string("btp.message_type", "Message Type",
-                                       base.ASCII) -- TODO
 local product_id = ProtoField.uint64("btp.product_id", "Product ID", base.DEC,
                                      nil, nil, nil)
 local disconnect_reason = ProtoField.uint8("btp.disconnect_reason",
@@ -177,9 +204,25 @@ local order_entry_reject_reason = ProtoField.uint8(
                                       order_entry_reject_reason_string, nil, nil)
 local time_in_force = ProtoField.uint8("btp.time_in_force", "Time in Force",
                                        base.HEX, time_in_force_string, nil, nil)
+local order_entry_message_type = ProtoField.uint8(
+                                     "btp.order_entry.message_type",
+                                     "Message Type", base.HEX,
+                                     order_entry_message_type_string, nil, nil)
+local drop_copy_message_type = ProtoField.uint8("btp.drop_copy.message_type",
+                                                "Message Type", base.HEX,
+                                                drop_copy_message_type_string,
+                                                nil, nil)
+
+local price_feed_message_type = ProtoField.uint8("btp.price_feed.message_type",
+                                                 "Message Type", base.HEX,
+                                                 price_feed_message_type_string,
+                                                 nil, nil)
+local login_message_type = ProtoField.uint8("btp.login.message_type",
+                                            "Message Type", base.HEX,
+                                            login_message_type_string, nil, nil)
 
 local function dissect_order_entry(buffer, pinfo, tree)
-    tree:add_le(message_type, buffer:range(0, 1))
+    tree:add_le(order_entry_message_type, buffer:range(0, 1))
     local mt = buffer:range(0, 1):string()
     if mt == "O" then
         tree:add_le(order_id, buffer:range(1, 8))
@@ -215,7 +258,7 @@ local function dissect_order_entry(buffer, pinfo, tree)
 end
 
 local function dissect_drop_copy(buffer, pinfo, tree)
-    tree:add_le(message_type, buffer:range(0, 1))
+    tree:add_le(drop_copy_message_type, buffer:range(0, 1))
     local mt = buffer:range(0, 1):string()
     if mt == "O" then
         tree:add_le(ack_id, buffer:range(1, 8))
@@ -298,7 +341,7 @@ local function dissect_levels(length, buffer, pinfo, tree)
 end
 
 local function dissect_pricefeed(buffer, pinfo, tree)
-    tree:add_le(message_type, buffer:range(0, 1))
+    tree:add_le(price_feed_message_type, buffer:range(0, 1))
     local mt = buffer:range(0, 1):string()
     if mt == "T" then
         tree:add_le(ack_id, buffer:range(1, 8))
@@ -331,7 +374,7 @@ local function dissect_pricefeed(buffer, pinfo, tree)
 end
 
 local function dissect_login(buffer, pinfo, tree)
-    tree:add_le(message_type, buffer:range(0, 1))
+    tree:add_le(login_message_type, buffer:range(0, 1))
     local mt = buffer:range(0, 1):string()
     if mt == "L" then
         tree:add_le(connection_id, buffer:range(1, 8))
@@ -379,14 +422,15 @@ end
 
 -- List of BTP fields
 btp_proto.fields = {
-    protocol_id, version, sequence_id, body_encoding, body_length, message_type,
-    product_id, disconnect_reason, expected_sequence_id, actual_sequence_id,
-    connection_id, auth_token, heartbeat_interval, persist_orders,
-    login_reject_reason, market_state, ack_id, side, price, quantity,
-    bids_length, bid_levels, asks_length, ask_levels, order_id, account_id_len,
-    account_id, cti_type, firm_name_len, firm_name, firm_type, user_memo_len,
-    user_memo, modify_id, old_price, old_quantity, filled_quantity, liquidity,
-    close_reason, order_entry_reject_reason, time_in_force
+    protocol_id, version, sequence_id, body_encoding, body_length, product_id,
+    disconnect_reason, expected_sequence_id, actual_sequence_id, connection_id,
+    auth_token, heartbeat_interval, persist_orders, login_reject_reason,
+    market_state, ack_id, side, price, quantity, bids_length, bid_levels,
+    asks_length, ask_levels, order_id, account_id_len, account_id, cti_type,
+    firm_name_len, firm_name, firm_type, user_memo_len, user_memo, modify_id,
+    old_price, old_quantity, filled_quantity, liquidity, close_reason,
+    order_entry_reject_reason, time_in_force, order_entry_message_type,
+    drop_copy_message_type, price_feed_message_type, login_message_type
 }
 
 -- This function dissects BTP packets
