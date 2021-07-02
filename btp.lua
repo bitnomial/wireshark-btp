@@ -35,6 +35,36 @@ local order_entry_reject_reason_string = {
     [0x12] = "Connection disabled"
 }
 
+local market_state_string = {
+    [string.byte("O")] = "Open",
+    [string.byte("H")] = "Halt",
+    [string.byte("C")] = "Closed"
+}
+
+local firm_type_string = {
+    [string.byte("R")] = "Reg/House",
+    [string.byte("S")] = "Seg/Customer"
+}
+
+local liquidity_string = {
+    [string.byte("A")] = "Add",
+    [string.byte("R")] = "Remove",
+    [string.byte("S")] = "Spread leg match"
+}
+
+local side_string = {[string.byte("A")] = "Ask", [string.byte("B")] = "Bid"}
+
+local close_reason_string = {
+    [string.byte("I")] = "IOC finished",
+    [string.byte("G")] = "Non-connection cancel",
+    [string.byte("S")] = "Self-match prevention cancel"
+}
+
+local time_in_force_string = {
+    [string.byte("D")] = "Day",
+    [string.byte("I")] = "IOC"
+}
+
 local function be2int(be)
     if string.len(be) == 2 then
         local a = string.byte(be, 1)
@@ -63,64 +93,90 @@ local sequence_id = ProtoField.uint32("btp.sequence_id", "Sequence ID",
                                       base.DEC, nil, nil, nil)
 local body_encoding = ProtoField.uint16("btp.body_encoding", "Body Encoding",
                                         base.HEX, body_encoding_string, nil, nil)
-local body_length =
-    ProtoField.uint16("btp.body_length", "Body Length", base.DEC)
+local body_length = ProtoField.uint16("btp.body_length", "Body Length",
+                                      base.DEC, nil, nil, nil)
 local message_type = ProtoField.string("btp.message_type", "Message Type",
-                                       base.ASCII)
-local product_id = ProtoField.uint64("btp.product_id", "Product ID", base.DEC)
+                                       base.ASCII) -- TODO
+local product_id = ProtoField.uint64("btp.product_id", "Product ID", base.DEC,
+                                     nil, nil, nil)
 local disconnect_reason = ProtoField.uint8("btp.disconnect_reason",
                                            "Disconnect Reason", base.HEX,
-                                           disconnect_reason_string)
+                                           disconnect_reason_string, nil, nil)
 local expected_sequence_id = ProtoField.uint32("btp.expected_sequence_id",
-                                               "Expected Sequence ID", base.DEC)
+                                               "Expected Sequence ID", base.DEC,
+                                               nil, nil, nil)
 local actual_sequence_id = ProtoField.uint32("btp.actual_sequence_id",
-                                             "Actual Sequence ID", base.DEC)
+                                             "Actual Sequence ID", base.DEC,
+                                             nil, nil, nil)
 local connection_id = ProtoField.uint64("btp.connection_id", "Connection ID",
-                                        base.DEC)
-local auth_token = ProtoField.bytes("btp.auth_token", "Auth Token")
+                                        base.DEC, nil, nil, nil)
+local auth_token = ProtoField.bytes("btp.auth_token", "Auth Token", base.DOT,
+                                    nil)
 local heartbeat_interval = ProtoField.uint8("btp.heartbeat_interval",
-                                            "Heartbeat Interval")
-local persist_orders = ProtoField.char("btp.persist_orders", "Persist Orders")
+                                            "Heartbeat Interval", base.HEX, nil,
+                                            nil, nil)
+local persist_orders = ProtoField.uint8("btp.persist_orders", "Persist Orders",
+                                        base.HEX, nil, nil, nil)
 local login_reject_reason = ProtoField.uint8("btp.login.reject_reason",
                                              "Reject Reason", base.HEX,
-                                             login_reject_reason_string)
-local market_state = ProtoField.string("btp.market_state", "Market State",
-                                       base.ASCII)
-local ack_id = ProtoField.uint64("btp.ack_id", "Ack ID", base.DEC)
-local side = ProtoField.string("btp.side", "Taker Side", base.ASCII)
-local price = ProtoField.int32("btp.price", "Price", base.DEC)
-local quantity = ProtoField.uint32("btp.quantity", "Quantity", base.DEC)
-local bids_length = ProtoField.uint64("btp.bids_length", "Bids Length")
-local bid_levels = ProtoField.bytes("btp.bid_levels", "Bid Levels")
-local asks_length = ProtoField.uint64("btp.asks_length", "Asks Length")
-local ask_levels = ProtoField.bytes("btp.ask_levels", "Ask Levels")
-local order_id = ProtoField.uint64("btp.order_id", "Order ID")
+                                             login_reject_reason_string, nil,
+                                             nil)
+local market_state = ProtoField.uint8("btp.market_state", "Market State",
+                                      base.HEX, market_state_string, nil, nil)
+local ack_id =
+    ProtoField.uint64("btp.ack_id", "Ack ID", base.DEC, nil, nil, nil)
+local side = ProtoField.uint8("btp.side", "Taker Side", base.HEX, side_string,
+                              nil, nil)
+local price = ProtoField.int32("btp.price", "Price", base.DEC, nil, nil, nil)
+local quantity = ProtoField.uint32("btp.quantity", "Quantity", base.DEC, nil,
+                                   nil, nil)
+local bids_length = ProtoField.uint32("btp.bids_length", "Bids Length",
+                                      base.DEC, nil, nil, nil)
+local bid_levels = ProtoField.bytes("btp.bid_levels", "Bid Levels", base.DOT,
+                                    nil)
+local asks_length = ProtoField.uint32("btp.asks_length", "Asks Length",
+                                      base.DEC, nil, nil, nil)
+local ask_levels = ProtoField.bytes("btp.ask_levels", "Ask Levels", base.DOT,
+                                    nil)
+local order_id = ProtoField.uint64("btp.order_id", "Order ID", base.HEX, nil,
+                                   nil, nil)
 local account_id_len = ProtoField.uint8("btp.account_id_len",
-                                        "Account ID Length", base.DEC)
-local account_id = ProtoField.string("btp.account_id", "Account ID", base.ASCII)
-local cti_type = ProtoField.uint8("btp.cti_type", "CTI Type", base.DEC)
+                                        "Account ID Length", base.DEC, nil, nil,
+                                        nil)
+local account_id = ProtoField.string("btp.account_id", "Account ID", base.ASCII,
+                                     nil)
+local cti_type = ProtoField.uint8("btp.cti_type", "CTI Type", base.DEC, nil,
+                                  nil, nil)
 local firm_name_len = ProtoField.uint8("btp.firm_name_len", "Firm Name Length",
-                                       base.DEC)
-local firm_name = ProtoField.string("btp.firm_name", "Firm Name", base.ASCII)
-local firm_type = ProtoField.string("btp.firm_type", "Firm Type", base.ASCII)
+                                       base.DEC, nil, nil, nil)
+local firm_name = ProtoField.string("btp.firm_name", "Firm Name", base.ASCII,
+                                    nil)
+local firm_type = ProtoField.uint8("btp.firm_type", "Firm Type", base.HEX,
+                                   firm_type_string, nil, nil)
 local user_memo_len = ProtoField.uint8("btp.user_memo_len", "User Memo Length",
-                                       base.DEC)
-local user_memo = ProtoField.string("btp.user_memo", "User Memo", base.ASCII)
-local modify_id = ProtoField.uint64("btp.modify_id", "Modify ID", base.DEC)
-local old_price = ProtoField.int32("btp.old_price", "Old Price", base.DEC)
+                                       base.DEC, nil, nil, nil)
+local user_memo = ProtoField.string("btp.user_memo", "User Memo", base.ASCII,
+                                    nil)
+local modify_id = ProtoField.uint64("btp.modify_id", "Modify ID", base.DEC, nil,
+                                    nil, nil)
+local old_price = ProtoField.int32("btp.old_price", "Old Price", base.DEC, nil,
+                                   nil, nil)
 local old_quantity = ProtoField.uint32("btp.old_quantity", "Old Quantity",
-                                       base.DEC)
+                                       base.DEC, nil, nil, nil)
 local filled_quantity = ProtoField.uint32("btp.filled_quantity",
-                                          "Filled Quantity", base.DEC)
-local liquidity = ProtoField.string("btp.liquidity", "Liquidity", base.ASCII)
-local close_reason = ProtoField.string("btp.close_reason", "Close Reason",
-                                       base.ASCII)
+                                          "Filled Quantity", base.DEC, nil, nil,
+                                          nil)
+local liquidity = ProtoField.uint8("btp.liquidity", "Liquidity", base.HEX,
+                                   liquidity_string, nil, nil)
+local close_reason = ProtoField.uint8("btp.close_reason", "Close Reason",
+                                      base.HEX, close_reason_string, nil, nil,
+                                      nil)
 local order_entry_reject_reason = ProtoField.uint8(
                                       "btp.order_entry.reject_reason",
                                       "Reject Reason", base.HEX,
-                                      order_entry_reject_reason_string)
-local time_in_force = ProtoField.string("btp.time_in_force", "Time in Force",
-                                        base.ASCII)
+                                      order_entry_reject_reason_string, nil, nil)
+local time_in_force = ProtoField.uint8("btp.time_in_force", "Time in Force",
+                                       base.HEX, time_in_force_string, nil, nil)
 
 local function dissect_order_entry(buffer, pinfo, tree)
     tree:add_le(message_type, buffer:range(0, 1))
