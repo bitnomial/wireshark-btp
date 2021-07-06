@@ -366,12 +366,12 @@ local function dissect_pricefeed(buffer, pinfo, tree)
         local length = buffer:range(17, 4):uint()
         local buf1 = buffer:range(21, length)
         local subtree = tree:add_le(bid_levels, buf1)
-        dissect_levels(length, buf2, pinfo, subtree)
+        dissect_levels(length, buf1, pinfo, subtree)
 
         tree:add_le(asks_length, buffer:range(21 + length, 4))
         local length2 = buffer:range(21 + length, 4):uint()
         local buf2 = buffer:range(21 + length, length2)
-        local subtree = tree:add_le(ask_levels, buf2)
+        subtree = tree:add_le(ask_levels, buf2)
         dissect_levels(length2, buf2, pinfo, subtree)
     end
 end
@@ -474,8 +474,8 @@ local function heuristic_checker(buffer, pinfo, tree)
     if protocol ~= "BT" then return false end
 
     -- ensure that the protocol version is version 2
-    local version = buffer:range(2, 2):le_uint()
-    if version ~= 0x0002 then return false end
+    local ver = buffer:range(2, 2):le_uint()
+    if ver ~= 0x0002 then return false end
 
     -- ensure that the body encoding is valid
     local encoding = buffer:range(8, 2):string()
