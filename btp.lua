@@ -81,7 +81,7 @@ local drop_copy_message_type_string = {
     [string.byte("C")] = "Close"
 }
 
-local price_feed_message_type_string = {
+local pricefeed_message_type_string = {
     [string.byte("T")] = "Trade",
     [string.byte("L")] = "Level",
     [string.byte("B")] = "Book"
@@ -213,10 +213,10 @@ local drop_copy_message_type = ProtoField.uint8("btp.drop_copy.message_type",
                                                 drop_copy_message_type_string,
                                                 nil, nil)
 
-local price_feed_message_type = ProtoField.uint8("btp.price_feed.message_type",
-                                                 "Message Type", base.HEX,
-                                                 price_feed_message_type_string,
-                                                 nil, nil)
+local pricefeed_message_type = ProtoField.uint8("btp.pricefeed.message_type",
+                                                "Message Type", base.HEX,
+                                                pricefeed_message_type_string,
+                                                nil, nil)
 local login_message_type = ProtoField.uint8("btp.login.message_type",
                                             "Message Type", base.HEX,
                                             login_message_type_string, nil, nil)
@@ -344,7 +344,7 @@ end
 
 local function dissect_pricefeed(buffer, pinfo, tree)
     local mt_byte = buffer:range(0, 1)
-    tree:add_le(price_feed_message_type, mt_byte)
+    tree:add_le(pricefeed_message_type, mt_byte)
     local mt = mt_byte:string()
     if mt == "T" then
         tree:add_le(ack_id, buffer:range(1, 8))
@@ -434,7 +434,7 @@ btp_proto.fields = {
     firm_name_len, firm_name, firm_type, user_memo_len, user_memo, modify_id,
     old_price, old_quantity, filled_quantity, liquidity, close_reason,
     order_entry_reject_reason, time_in_force, order_entry_message_type,
-    drop_copy_message_type, price_feed_message_type, login_message_type
+    drop_copy_message_type, pricefeed_message_type, login_message_type
 }
 
 -- This function dissects BTP packets
