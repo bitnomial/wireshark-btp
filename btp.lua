@@ -363,15 +363,15 @@ local function dissect_pricefeed(buffer, pinfo, tree)
         tree:add_le(product_id, buffer:range(9, 8))
 
         tree:add_le(bids_length, buffer:range(17, 4))
-        length = buffer:range(17, 4):uint()
-        buf1 = buffer:range(21, length)
-        subtree = tree:add_le(bid_levels, buf1)
+        local length = buffer:range(17, 4):uint()
+        local buf1 = buffer:range(21, length)
+        local subtree = tree:add_le(bid_levels, buf1)
         dissect_levels(length, buf2, pinfo, subtree)
 
         tree:add_le(asks_length, buffer:range(21 + length, 4))
-        length2 = buffer:range(21 + length, 4):uint()
-        buf2 = buffer:range(21 + length, length2)
-        subtree = tree:add_le(ask_levels, buf2)
+        local length2 = buffer:range(21 + length, 4):uint()
+        local buf2 = buffer:range(21 + length, length2)
+        local subtree = tree:add_le(ask_levels, buf2)
         dissect_levels(length2, buf2, pinfo, subtree)
     end
 end
