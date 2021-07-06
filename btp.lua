@@ -222,8 +222,9 @@ local login_message_type = ProtoField.uint8("btp.login.message_type",
                                             login_message_type_string, nil, nil)
 
 local function dissect_order_entry(buffer, pinfo, tree)
-    tree:add_le(order_entry_message_type, buffer:range(0, 1))
-    local mt = buffer:range(0, 1):string()
+    local mt_byte = buffer:range(0, 1)
+    tree:add_le(order_entry_message_type, mt_byte)
+    local mt = mt_byte:string()
     if mt == "O" then
         tree:add_le(order_id, buffer:range(1, 8))
         tree:add_le(product_id, buffer:range(9, 8))
@@ -258,8 +259,9 @@ local function dissect_order_entry(buffer, pinfo, tree)
 end
 
 local function dissect_drop_copy(buffer, pinfo, tree)
-    tree:add_le(drop_copy_message_type, buffer:range(0, 1))
-    local mt = buffer:range(0, 1):string()
+    local mt_byte = buffer:range(0, 1)
+    tree:add_le(drop_copy_message_type, mt_byte)
+    local mt = mt_byte:string()
     if mt == "O" then
         tree:add_le(ack_id, buffer:range(1, 8))
         tree:add_le(order_id, buffer:range(9, 8))
@@ -341,8 +343,9 @@ local function dissect_levels(length, buffer, pinfo, tree)
 end
 
 local function dissect_pricefeed(buffer, pinfo, tree)
-    tree:add_le(price_feed_message_type, buffer:range(0, 1))
-    local mt = buffer:range(0, 1):string()
+    local mt_byte = buffer:range(0, 1)
+    tree:add_le(price_feed_message_type, mt_byte)
+    local mt = mt_byte:string()
     if mt == "T" then
         tree:add_le(ack_id, buffer:range(1, 8))
         tree:add_le(product_id, buffer:range(9, 8))
@@ -374,8 +377,9 @@ local function dissect_pricefeed(buffer, pinfo, tree)
 end
 
 local function dissect_login(buffer, pinfo, tree)
-    tree:add_le(login_message_type, buffer:range(0, 1))
-    local mt = buffer:range(0, 1):string()
+    local mt_byte = buffer:range(0, 1)
+    tree:add_le(login_message_type, mt_byte)
+    local mt = mt_byte:string()
     if mt == "L" then
         tree:add_le(connection_id, buffer:range(1, 8))
         tree:add_le(auth_token, buffer:range(9, 32))
