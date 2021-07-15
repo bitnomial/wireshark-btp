@@ -1,14 +1,27 @@
 # BTP Wireshark Plugin
 
-A Wireshark plugin for the [Bitnomial Transfer Protocol (BTP)](https://bitnomial.com/docs/bitnomial-transfer-protocol/): a binary, low latency, direct market access, trading and market data protocol.
+A Wireshark plugin for the [Bitnomial Transfer Protocol (BTP)](https://bitnomial.com/docs/bitnomial-transfer-protocol/):
+a binary, low latency, direct market access, trading and market data protocol.
+
+## Development
+
+During development, a Lua file can be loaded into the Wireshark application with the arguments:
+
+```
+$ wireshark -X lua_script:<file.lua>
+```
+
+This is useful during Wireshark plugin development.
 
 ## Installation
 
 To install the BTP Wireshark plugin, copy `btp.lua` to the correct path for your operation system
 
- - Windows users can copy the file to `%APPDATA%\Wireshark\plugins\` or `WIRESHARK\plugins\`, where WIRESHARK is their Wireshark installation location.
- - Linux and other unix-like users can copy the file to `~/.local/lib/wireshark/plugins`
- - macOS users can copy the file to `INSTALLDIR/lib/wireshark/plugins`, unless they are using an application bundle, in which case they should copy the file to `Wireshark.app/Contents/PlugIns/wireshark`
+- Windows users can copy the file to `%APPDATA%\Wireshark\plugins\` or `WIRESHARK\plugins\`,
+  where WIRESHARK is their Wireshark installation location.
+- Linux and other unix-like users can copy the file to `~/.local/lib/wireshark/plugins`
+- macOS users can copy the file to `INSTALLDIR/lib/wireshark/plugins`, unless they are using an
+  application bundle, in which case they should copy the file to `Wireshark.app/Contents/PlugIns/wireshark`
 
 More information is available [here](https://www.wireshark.org/docs/wsug_html_chunked/ChPluginFolders.html).
 
