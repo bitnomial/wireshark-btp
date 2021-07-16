@@ -1,3 +1,5 @@
+-- This plugin was downloaded from https://github.com/bitnomial/wireshark-btp/
+-- 
 local btp_proto = Proto("btp", "Bitnomial Trading Protocol")
 
 local disconnect_reason_string = {
