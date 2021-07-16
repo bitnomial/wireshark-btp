@@ -1,6 +1,6 @@
 -- This plugin was downloaded from https://github.com/bitnomial/wireshark-btp/
 -- 
-local btp_proto = Proto("btp", "Bitnomial Trading Protocol")
+local btp_proto = Proto("btp", "bitnomial trading protocol")
 
 local disconnect_reason_string = {
     [0x01] = "Sequence ID fault",
