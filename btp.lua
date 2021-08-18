@@ -397,7 +397,8 @@ end
 
 local function dissect_market_state(buffer, pinfo, tree)
     tree:add_le(market_state, buffer:range(0, 1))
-    tree:add_le(product_id, buffer:range(1, 8))
+    tree:add_le(ack_id, buffer:range(1, 8))
+    tree:add_le(product_id, buffer:range(9, 8))
 end
 
 local function dissect_heartbeat(buffer, pinfo, tree)
