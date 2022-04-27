@@ -35,6 +35,7 @@ local order_entry_reject_reason_string = {
     [0x10] = "Messaging rate exceeded",
     [0x11] = "Position limit exceeded",
     [0x12] = "Connection disabled",
+    [0x13] = "Block Trade Expired",
 }
 
 local market_state_string = {
@@ -87,6 +88,7 @@ local pricefeed_message_type_string = {
     [string.byte("T")] = "Trade",
     [string.byte("L")] = "Level",
     [string.byte("B")] = "Book",
+    [string.byte("X")] = "BlockTrade",
 }
 
 local login_message_type_string = {
@@ -333,6 +335,10 @@ local function dissect_drop_copy(buffer, pinfo, tree)
 end
 
 local function dissect_levels(length, buffer, pinfo, tree)
+    -- lua for loops still run the body once if begin == end
+    if length < 12 then
+        return
+    end
     for i = 0, length, 12 do
         tree:add_le(price, buffer:range(i, 8))
         tree:add_le(quantity, buffer:range(i + 8, 4))
@@ -349,6 +355,11 @@ local function dissect_pricefeed(buffer, pinfo, tree)
         tree:add_le(side, buffer:range(17, 1))
         tree:add_le(price, buffer:range(18, 8))
         tree:add_le(quantity, buffer:range(26, 4))
+    elseif mt == "X" then
+        tree:add_le(ack_id, buffer:range(1, 8))
+        tree:add_le(product_id, buffer:range(9, 8))
+        tree:add_le(price, buffer:range(17, 8))
+        tree:add_le(quantity, buffer:range(25, 4))
     elseif mt == "L" then
         tree:add_le(ack_id, buffer:range(1, 8))
         tree:add_le(product_id, buffer:range(9, 8))
@@ -360,16 +371,16 @@ local function dissect_pricefeed(buffer, pinfo, tree)
         tree:add_le(product_id, buffer:range(9, 8))
 
         tree:add_le(bids_length, buffer:range(17, 4))
-        local length = buffer:range(17, 4):uint()
-        local buf1 = buffer:range(21, length)
-        local subtree = tree:add_le(bid_levels, buf1)
-        dissect_levels(length, buf1, pinfo, subtree)
+        local bid_length = buffer:range(17, 4):uint()
+        local buf = buffer:range(21, bid_length)
+        local subtree = tree:add_le(bid_levels, buf)
+        dissect_levels(bid_length, buf, pinfo, subtree)
 
-        tree:add_le(asks_length, buffer:range(21 + length, 4))
-        local length2 = buffer:range(21 + length, 4):uint()
-        local buf2 = buffer:range(21 + length, length2)
-        subtree = tree:add_le(ask_levels, buf2)
-        dissect_levels(length2, buf2, pinfo, subtree)
+        tree:add_le(asks_length, buffer:range(21 + bid_length, 4))
+        local ask_length = buffer:range(21 + bid_length, 4):uint()
+        local buf2 = buffer:range(21 + bid_length, ask_length)
+        local subtree2 = tree:add_le(ask_levels, buf2)
+        dissect_levels(ask_length, buf2, pinfo, subtree2)
     end
 end
 
