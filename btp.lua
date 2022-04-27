@@ -1,5 +1,5 @@
 -- This plugin was downloaded from https://github.com/bitnomial/wireshark-btp/
--- 
+--
 local btp_proto = Proto("btp", "bitnomial transfer protocol")
 
 local disconnect_reason_string = {
@@ -7,13 +7,13 @@ local disconnect_reason_string = {
     [0x02] = "Heartbeat fault",
     [0x03] = "Failed to login within one (1) second",
     [0x04] = "Messaging rate exceeded",
-    [0x05] = "Failed to parse message"
+    [0x05] = "Failed to parse message",
 }
 
 local login_reject_reason_string = {
     [0x01] = "Not logged in",
     [0x02] = "Unauthorized",
-    [0x03] = "Already logged in"
+    [0x03] = "Already logged in",
 }
 
 local order_entry_reject_reason_string = {
@@ -34,37 +34,37 @@ local order_entry_reject_reason_string = {
     [0x0F] = "Give-up unauthorized",
     [0x10] = "Messaging rate exceeded",
     [0x11] = "Position limit exceeded",
-    [0x12] = "Connection disabled"
+    [0x12] = "Connection disabled",
 }
 
 local market_state_string = {
     [string.byte("O")] = "Open",
     [string.byte("H")] = "Halt",
-    [string.byte("C")] = "Closed"
+    [string.byte("C")] = "Closed",
 }
 
 local firm_type_string = {
     [string.byte("R")] = "Reg/House",
-    [string.byte("S")] = "Seg/Customer"
+    [string.byte("S")] = "Seg/Customer",
 }
 
 local liquidity_string = {
     [string.byte("A")] = "Add",
     [string.byte("R")] = "Remove",
-    [string.byte("S")] = "Spread leg match"
+    [string.byte("S")] = "Spread leg match",
 }
 
-local side_string = {[string.byte("A")] = "Ask", [string.byte("B")] = "Bid"}
+local side_string = { [string.byte("A")] = "Ask", [string.byte("B")] = "Bid" }
 
 local close_reason_string = {
     [string.byte("I")] = "IOC finished",
     [string.byte("G")] = "Non-connection cancel",
-    [string.byte("S")] = "Self-match prevention cancel"
+    [string.byte("S")] = "Self-match prevention cancel",
 }
 
 local time_in_force_string = {
     [string.byte("D")] = "Day",
-    [string.byte("I")] = "IOC"
+    [string.byte("I")] = "IOC",
 }
 
 local order_entry_message_type_string = {
@@ -73,27 +73,27 @@ local order_entry_message_type_string = {
     [string.byte("A")] = "Ack",
     [string.byte("R")] = "Reject",
     [string.byte("C")] = "Closed",
-    [string.byte("F")] = "Fill"
+    [string.byte("F")] = "Fill",
 }
 
 local drop_copy_message_type_string = {
     [string.byte("O")] = "Open Ack",
     [string.byte("M")] = "Modify Ack",
     [string.byte("F")] = "Fill",
-    [string.byte("C")] = "Close"
+    [string.byte("C")] = "Close",
 }
 
 local pricefeed_message_type_string = {
     [string.byte("T")] = "Trade",
     [string.byte("L")] = "Level",
-    [string.byte("B")] = "Book"
+    [string.byte("B")] = "Book",
 }
 
 local login_message_type_string = {
     [string.byte("L")] = "Login",
     [string.byte("K")] = "Logout",
     [string.byte("A")] = "Ack",
-    [string.byte("R")] = "Reject"
+    [string.byte("R")] = "Reject",
 }
 
 local function be2int(be)
@@ -113,115 +113,110 @@ local body_encoding_string = {
     [be2int("LG")] = "Login",
     [be2int("MS")] = "Market State",
     [be2int("HB")] = "Heartbeat",
-    [be2int("DN")] = "Disconnect"
+    [be2int("DN")] = "Disconnect",
 }
 
-local protocol_id = ProtoField.string("btp.protocol_id", "Protocol ID",
-                                      base.ASCII, nil)
-local version = ProtoField.uint16("btp.version", "Version", base.DEC, nil, nil,
-                                  nil)
-local sequence_id = ProtoField.uint32("btp.sequence_id", "Sequence ID",
-                                      base.DEC, nil, nil, nil)
-local body_encoding = ProtoField.uint16("btp.body_encoding", "Body Encoding",
-                                        base.HEX, body_encoding_string, nil, nil)
-local body_length = ProtoField.uint16("btp.body_length", "Body Length",
-                                      base.DEC, nil, nil, nil)
-local product_id = ProtoField.uint64("btp.product_id", "Product ID", base.DEC,
-                                     nil, nil, nil)
-local disconnect_reason = ProtoField.uint8("btp.disconnect_reason",
-                                           "Disconnect Reason", base.HEX,
-                                           disconnect_reason_string, nil, nil)
-local expected_sequence_id = ProtoField.uint32("btp.expected_sequence_id",
-                                               "Expected Sequence ID", base.DEC,
-                                               nil, nil, nil)
-local actual_sequence_id = ProtoField.uint32("btp.actual_sequence_id",
-                                             "Actual Sequence ID", base.DEC,
-                                             nil, nil, nil)
-local connection_id = ProtoField.uint64("btp.connection_id", "Connection ID",
-                                        base.DEC, nil, nil, nil)
-local auth_token = ProtoField.bytes("btp.auth_token", "Auth Token", base.DOT,
-                                    nil)
-local heartbeat_interval = ProtoField.uint8("btp.heartbeat_interval",
-                                            "Heartbeat Interval", base.HEX, nil,
-                                            nil, nil)
-local persist_orders = ProtoField.uint8("btp.persist_orders", "Persist Orders",
-                                        base.HEX, nil, nil, nil)
-local login_reject_reason = ProtoField.uint8("btp.login.reject_reason",
-                                             "Reject Reason", base.HEX,
-                                             login_reject_reason_string, nil,
-                                             nil)
-local market_state = ProtoField.uint8("btp.market_state", "Market State",
-                                      base.HEX, market_state_string, nil, nil)
-local ack_id =
-    ProtoField.uint64("btp.ack_id", "Ack ID", base.DEC, nil, nil, nil)
-local side = ProtoField.uint8("btp.side", "Taker Side", base.HEX, side_string,
-                              nil, nil)
+local protocol_id = ProtoField.string("btp.protocol_id", "Protocol ID", base.ASCII, nil)
+local version = ProtoField.uint16("btp.version", "Version", base.DEC, nil, nil, nil)
+local sequence_id = ProtoField.uint32("btp.sequence_id", "Sequence ID", base.DEC, nil, nil, nil)
+local body_encoding = ProtoField.uint16("btp.body_encoding", "Body Encoding", base.HEX, body_encoding_string, nil, nil)
+local body_length = ProtoField.uint16("btp.body_length", "Body Length", base.DEC, nil, nil, nil)
+local product_id = ProtoField.uint64("btp.product_id", "Product ID", base.DEC, nil, nil, nil)
+local disconnect_reason = ProtoField.uint8(
+    "btp.disconnect_reason",
+    "Disconnect Reason",
+    base.HEX,
+    disconnect_reason_string,
+    nil,
+    nil
+)
+local expected_sequence_id = ProtoField.uint32(
+    "btp.expected_sequence_id",
+    "Expected Sequence ID",
+    base.DEC,
+    nil,
+    nil,
+    nil
+)
+local actual_sequence_id = ProtoField.uint32("btp.actual_sequence_id", "Actual Sequence ID", base.DEC, nil, nil, nil)
+local connection_id = ProtoField.uint64("btp.connection_id", "Connection ID", base.DEC, nil, nil, nil)
+local auth_token = ProtoField.bytes("btp.auth_token", "Auth Token", base.DOT, nil)
+local heartbeat_interval = ProtoField.uint8("btp.heartbeat_interval", "Heartbeat Interval", base.HEX, nil, nil, nil)
+local persist_orders = ProtoField.uint8("btp.persist_orders", "Persist Orders", base.HEX, nil, nil, nil)
+local login_reject_reason = ProtoField.uint8(
+    "btp.login.reject_reason",
+    "Reject Reason",
+    base.HEX,
+    login_reject_reason_string,
+    nil,
+    nil
+)
+local market_state = ProtoField.uint8("btp.market_state", "Market State", base.HEX, market_state_string, nil, nil)
+local ack_id = ProtoField.uint64("btp.ack_id", "Ack ID", base.DEC, nil, nil, nil)
+local side = ProtoField.uint8("btp.side", "Taker Side", base.HEX, side_string, nil, nil)
 local price = ProtoField.int64("btp.price", "Price", base.DEC, nil, nil, nil)
-local quantity = ProtoField.uint32("btp.quantity", "Quantity", base.DEC, nil,
-                                   nil, nil)
-local bids_length = ProtoField.uint32("btp.bids_length", "Bids Length",
-                                      base.DEC, nil, nil, nil)
-local bid_levels = ProtoField.bytes("btp.bid_levels", "Bid Levels", base.DOT,
-                                    nil)
-local asks_length = ProtoField.uint32("btp.asks_length", "Asks Length",
-                                      base.DEC, nil, nil, nil)
-local ask_levels = ProtoField.bytes("btp.ask_levels", "Ask Levels", base.DOT,
-                                    nil)
-local order_id = ProtoField.uint64("btp.order_id", "Order ID", base.HEX, nil,
-                                   nil, nil)
-local account_id_len = ProtoField.uint8("btp.account_id_len",
-                                        "Account ID Length", base.DEC, nil, nil,
-                                        nil)
-local account_id = ProtoField.string("btp.account_id", "Account ID", base.ASCII,
-                                     nil)
-local cti_type = ProtoField.uint8("btp.cti_type", "CTI Type", base.DEC, nil,
-                                  nil, nil)
-local firm_name_len = ProtoField.uint8("btp.firm_name_len", "Firm Name Length",
-                                       base.DEC, nil, nil, nil)
-local firm_name = ProtoField.string("btp.firm_name", "Firm Name", base.ASCII,
-                                    nil)
-local firm_type = ProtoField.uint8("btp.firm_type", "Firm Type", base.HEX,
-                                   firm_type_string, nil, nil)
-local user_memo_len = ProtoField.uint8("btp.user_memo_len", "User Memo Length",
-                                       base.DEC, nil, nil, nil)
-local user_memo = ProtoField.string("btp.user_memo", "User Memo", base.ASCII,
-                                    nil)
-local modify_id = ProtoField.uint64("btp.modify_id", "Modify ID", base.DEC, nil,
-                                    nil, nil)
-local old_price = ProtoField.int64("btp.old_price", "Old Price", base.DEC, nil,
-                                   nil, nil)
-local old_quantity = ProtoField.uint32("btp.old_quantity", "Old Quantity",
-                                       base.DEC, nil, nil, nil)
-local filled_quantity = ProtoField.uint32("btp.filled_quantity",
-                                          "Filled Quantity", base.DEC, nil, nil,
-                                          nil)
-local liquidity = ProtoField.uint8("btp.liquidity", "Liquidity", base.HEX,
-                                   liquidity_string, nil, nil)
-local close_reason = ProtoField.uint8("btp.close_reason", "Close Reason",
-                                      base.HEX, close_reason_string, nil, nil,
-                                      nil)
+local quantity = ProtoField.uint32("btp.quantity", "Quantity", base.DEC, nil, nil, nil)
+local bids_length = ProtoField.uint32("btp.bids_length", "Bids Length", base.DEC, nil, nil, nil)
+local bid_levels = ProtoField.bytes("btp.bid_levels", "Bid Levels", base.DOT, nil)
+local asks_length = ProtoField.uint32("btp.asks_length", "Asks Length", base.DEC, nil, nil, nil)
+local ask_levels = ProtoField.bytes("btp.ask_levels", "Ask Levels", base.DOT, nil)
+local order_id = ProtoField.uint64("btp.order_id", "Order ID", base.HEX, nil, nil, nil)
+local account_id_len = ProtoField.uint8("btp.account_id_len", "Account ID Length", base.DEC, nil, nil, nil)
+local account_id = ProtoField.string("btp.account_id", "Account ID", base.ASCII, nil)
+local cti_type = ProtoField.uint8("btp.cti_type", "CTI Type", base.DEC, nil, nil, nil)
+local firm_name_len = ProtoField.uint8("btp.firm_name_len", "Firm Name Length", base.DEC, nil, nil, nil)
+local firm_name = ProtoField.string("btp.firm_name", "Firm Name", base.ASCII, nil)
+local firm_type = ProtoField.uint8("btp.firm_type", "Firm Type", base.HEX, firm_type_string, nil, nil)
+local user_memo_len = ProtoField.uint8("btp.user_memo_len", "User Memo Length", base.DEC, nil, nil, nil)
+local user_memo = ProtoField.string("btp.user_memo", "User Memo", base.ASCII, nil)
+local modify_id = ProtoField.uint64("btp.modify_id", "Modify ID", base.DEC, nil, nil, nil)
+local old_price = ProtoField.int64("btp.old_price", "Old Price", base.DEC, nil, nil, nil)
+local old_quantity = ProtoField.uint32("btp.old_quantity", "Old Quantity", base.DEC, nil, nil, nil)
+local filled_quantity = ProtoField.uint32("btp.filled_quantity", "Filled Quantity", base.DEC, nil, nil, nil)
+local liquidity = ProtoField.uint8("btp.liquidity", "Liquidity", base.HEX, liquidity_string, nil, nil)
+local close_reason = ProtoField.uint8("btp.close_reason", "Close Reason", base.HEX, close_reason_string, nil, nil, nil)
 local order_entry_reject_reason = ProtoField.uint8(
-                                      "btp.order_entry.reject_reason",
-                                      "Reject Reason", base.HEX,
-                                      order_entry_reject_reason_string, nil, nil)
-local time_in_force = ProtoField.uint8("btp.time_in_force", "Time in Force",
-                                       base.HEX, time_in_force_string, nil, nil)
+    "btp.order_entry.reject_reason",
+    "Reject Reason",
+    base.HEX,
+    order_entry_reject_reason_string,
+    nil,
+    nil
+)
+local time_in_force = ProtoField.uint8("btp.time_in_force", "Time in Force", base.HEX, time_in_force_string, nil, nil)
 local order_entry_message_type = ProtoField.uint8(
-                                     "btp.order_entry.message_type",
-                                     "Message Type", base.HEX,
-                                     order_entry_message_type_string, nil, nil)
-local drop_copy_message_type = ProtoField.uint8("btp.drop_copy.message_type",
-                                                "Message Type", base.HEX,
-                                                drop_copy_message_type_string,
-                                                nil, nil)
+    "btp.order_entry.message_type",
+    "Message Type",
+    base.HEX,
+    order_entry_message_type_string,
+    nil,
+    nil
+)
+local drop_copy_message_type = ProtoField.uint8(
+    "btp.drop_copy.message_type",
+    "Message Type",
+    base.HEX,
+    drop_copy_message_type_string,
+    nil,
+    nil
+)
 
-local pricefeed_message_type = ProtoField.uint8("btp.pricefeed.message_type",
-                                                "Message Type", base.HEX,
-                                                pricefeed_message_type_string,
-                                                nil, nil)
-local login_message_type = ProtoField.uint8("btp.login.message_type",
-                                            "Message Type", base.HEX,
-                                            login_message_type_string, nil, nil)
+local pricefeed_message_type = ProtoField.uint8(
+    "btp.pricefeed.message_type",
+    "Message Type",
+    base.HEX,
+    pricefeed_message_type_string,
+    nil,
+    nil
+)
+local login_message_type = ProtoField.uint8(
+    "btp.login.message_type",
+    "Message Type",
+    base.HEX,
+    login_message_type_string,
+    nil,
+    nil
+)
 
 local function dissect_order_entry(buffer, pinfo, tree)
     local mt_byte = buffer:range(0, 1)
@@ -419,7 +414,7 @@ local body_dissectors = {
     ["LG"] = dissect_login,
     ["MS"] = dissect_market_state,
     ["HB"] = dissect_heartbeat,
-    ["DN"] = dissect_disconnect
+    ["DN"] = dissect_disconnect,
 }
 
 -- Invoke the body dissector for the given encoding type
@@ -429,15 +424,50 @@ end
 
 -- List of BTP fields
 btp_proto.fields = {
-    protocol_id, version, sequence_id, body_encoding, body_length, product_id,
-    disconnect_reason, expected_sequence_id, actual_sequence_id, connection_id,
-    auth_token, heartbeat_interval, persist_orders, login_reject_reason,
-    market_state, ack_id, side, price, quantity, bids_length, bid_levels,
-    asks_length, ask_levels, order_id, account_id_len, account_id, cti_type,
-    firm_name_len, firm_name, firm_type, user_memo_len, user_memo, modify_id,
-    old_price, old_quantity, filled_quantity, liquidity, close_reason,
-    order_entry_reject_reason, time_in_force, order_entry_message_type,
-    drop_copy_message_type, pricefeed_message_type, login_message_type
+    protocol_id,
+    version,
+    sequence_id,
+    body_encoding,
+    body_length,
+    product_id,
+    disconnect_reason,
+    expected_sequence_id,
+    actual_sequence_id,
+    connection_id,
+    auth_token,
+    heartbeat_interval,
+    persist_orders,
+    login_reject_reason,
+    market_state,
+    ack_id,
+    side,
+    price,
+    quantity,
+    bids_length,
+    bid_levels,
+    asks_length,
+    ask_levels,
+    order_id,
+    account_id_len,
+    account_id,
+    cti_type,
+    firm_name_len,
+    firm_name,
+    firm_type,
+    user_memo_len,
+    user_memo,
+    modify_id,
+    old_price,
+    old_quantity,
+    filled_quantity,
+    liquidity,
+    close_reason,
+    order_entry_reject_reason,
+    time_in_force,
+    order_entry_message_type,
+    drop_copy_message_type,
+    pricefeed_message_type,
+    login_message_type,
 }
 
 -- This function dissects BTP packets
@@ -450,8 +480,7 @@ function btp_proto.dissector(buffer, pinfo, tree)
     pinfo.cols.protocol = btp_proto.name
 
     -- dissect header
-    local subtree = tree:add(btp_proto, buffer:range(),
-                             "Bitnomial Trading Protocol")
+    local subtree = tree:add(btp_proto, buffer:range(), "Bitnomial Trading Protocol")
     local header = subtree:add_le(btp_proto, buffer:range(0, 12), "BTP Header")
     header:add_le(protocol_id, buffer:range(0, 2))
     header:add_le(version, buffer:range(2, 2))
@@ -470,19 +499,27 @@ end
 local function heuristic_checker(buffer, pinfo, tree)
     -- ensure that we have at least the minimum packet size
     local length = buffer:len()
-    if length < 12 then return false end
+    if length < 12 then
+        return false
+    end
 
     -- ensure that the protocol ID matches
     local protocol = buffer:range(0, 2):string()
-    if protocol ~= "BT" then return false end
+    if protocol ~= "BT" then
+        return false
+    end
 
     -- ensure that the protocol version is version 2
     local ver = buffer:range(2, 2):le_uint()
-    if ver ~= 0x0002 then return false end
+    if ver ~= 0x0002 then
+        return false
+    end
 
     -- ensure that the body encoding is valid
     local encoding = buffer:range(8, 2):string()
-    if body_dissectors[encoding] == nil then return false end
+    if body_dissectors[encoding] == nil then
+        return false
+    end
 
     -- invoke dissector
     btp_proto.dissector(buffer, pinfo, tree)
