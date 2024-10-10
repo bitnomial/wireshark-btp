@@ -14,6 +14,7 @@ local login_reject_reason_string = {
     [0x01] = "Not logged in",
     [0x02] = "Unauthorized",
     [0x03] = "Already logged in",
+    [0x04] = "BadVersion",
 }
 
 local order_entry_reject_reason_string = {
@@ -110,49 +111,33 @@ end
 
 local body_encoding_string = {
     [be2int("OE")] = "Order Entry",
-    [be2int("DC")] = "Drop Copy",
-    [be2int("PF")] = "Price Feed",
+    [be2int("DC")] = "Dropcopy",
+    [be2int("PF")] = "Pricefeed",
     [be2int("LG")] = "Login",
     [be2int("MS")] = "Market State",
     [be2int("HB")] = "Heartbeat",
     [be2int("DN")] = "Disconnect",
 }
 
+-- BTP header fields
 local protocol_id = ProtoField.string("btp.protocol_id", "Protocol ID", base.ASCII, nil)
 local version = ProtoField.uint16("btp.version", "Version", base.DEC, nil, nil, nil)
 local sequence_id = ProtoField.uint32("btp.sequence_id", "Sequence ID", base.DEC, nil, nil, nil)
 local body_encoding = ProtoField.uint16("btp.body_encoding", "Body Encoding", base.HEX, body_encoding_string, nil, nil)
 local body_length = ProtoField.uint16("btp.body_length", "Body Length", base.DEC, nil, nil, nil)
+
 local product_id = ProtoField.uint64("btp.product_id", "Product ID", base.DEC, nil, nil, nil)
-local disconnect_reason = ProtoField.uint8(
-    "btp.disconnect_reason",
-    "Disconnect Reason",
-    base.HEX,
-    disconnect_reason_string,
-    nil,
-    nil
-)
-local expected_sequence_id = ProtoField.uint32(
-    "btp.expected_sequence_id",
-    "Expected Sequence ID",
-    base.DEC,
-    nil,
-    nil,
-    nil
-)
+local disconnect_reason =
+    ProtoField.uint8("btp.disconnect_reason", "Disconnect Reason", base.HEX, disconnect_reason_string, nil, nil)
+local expected_sequence_id =
+    ProtoField.uint32("btp.expected_sequence_id", "Expected Sequence ID", base.DEC, nil, nil, nil)
 local actual_sequence_id = ProtoField.uint32("btp.actual_sequence_id", "Actual Sequence ID", base.DEC, nil, nil, nil)
 local connection_id = ProtoField.uint64("btp.connection_id", "Connection ID", base.DEC, nil, nil, nil)
 local auth_token = ProtoField.bytes("btp.auth_token", "Auth Token", base.DOT, nil)
 local heartbeat_interval = ProtoField.uint8("btp.heartbeat_interval", "Heartbeat Interval", base.HEX, nil, nil, nil)
 local persist_orders = ProtoField.uint8("btp.persist_orders", "Persist Orders", base.HEX, nil, nil, nil)
-local login_reject_reason = ProtoField.uint8(
-    "btp.login.reject_reason",
-    "Reject Reason",
-    base.HEX,
-    login_reject_reason_string,
-    nil,
-    nil
-)
+local login_reject_reason =
+    ProtoField.uint8("btp.login.reject_reason", "Reject Reason", base.HEX, login_reject_reason_string, nil, nil)
 local market_state = ProtoField.uint8("btp.market_state", "Market State", base.HEX, market_state_string, nil, nil)
 local ack_id = ProtoField.uint64("btp.ack_id", "Ack ID", base.DEC, nil, nil, nil)
 local side = ProtoField.uint8("btp.side", "Taker Side", base.HEX, side_string, nil, nil)
@@ -194,33 +179,32 @@ local order_entry_message_type = ProtoField.uint8(
     nil,
     nil
 )
-local drop_copy_message_type = ProtoField.uint8(
-    "btp.drop_copy.message_type",
-    "Message Type",
-    base.HEX,
-    drop_copy_message_type_string,
-    nil,
-    nil
-)
+local drop_copy_message_type =
+    ProtoField.uint8("btp.drop_copy.message_type", "Message Type", base.HEX, drop_copy_message_type_string, nil, nil)
 
-local pricefeed_message_type = ProtoField.uint8(
-    "btp.pricefeed.message_type",
-    "Message Type",
-    base.HEX,
-    pricefeed_message_type_string,
-    nil,
-    nil
-)
-local login_message_type = ProtoField.uint8(
-    "btp.login.message_type",
-    "Message Type",
-    base.HEX,
-    login_message_type_string,
-    nil,
-    nil
-)
+local pricefeed_message_type =
+    ProtoField.uint8("btp.pricefeed.message_type", "Message Type", base.HEX, pricefeed_message_type_string, nil, nil)
+local login_message_type =
+    ProtoField.uint8("btp.login.message_type", "Message Type", base.HEX, login_message_type_string, nil, nil)
 
-local function dissect_order_entry(buffer, pinfo, tree)
+local function dissect_order_entry_fill_v2(buffer, pinfo, tree)
+    tree:add_le(ack_id, buffer:range(1, 8))
+    tree:add_le(order_id, buffer:range(9, 8))
+    tree:add_le(price, buffer:range(17, 8))
+    tree:add_le(quantity, buffer:range(25, 4))
+    tree:add_le(liquidity, buffer:range(29, 1))
+end
+
+local function dissect_order_entry_fill_v3(buffer, pinfo, tree)
+    tree:add_le(ack_id, buffer:range(1, 8))
+    tree:add_le(product_id, buffer:range(9, 8))
+    tree:add_le(order_id, buffer:range(17, 8))
+    tree:add_le(price, buffer:range(25, 8))
+    tree:add_le(quantity, buffer:range(33, 4))
+    tree:add_le(liquidity, buffer:range(37, 1))
+end
+
+local function dissect_order_entry(hdr, buffer, pinfo, tree)
     local mt_byte = buffer:range(0, 1)
     tree:add_le(order_entry_message_type, mt_byte)
     local mt = mt_byte:string()
@@ -249,15 +233,15 @@ local function dissect_order_entry(buffer, pinfo, tree)
         tree:add_le(order_id, buffer:range(9, 8))
         tree:add_le(close_reason, buffer:range(17, 1))
     elseif mt == "F" then
-        tree:add_le(ack_id, buffer:range(1, 8))
-        tree:add_le(order_id, buffer:range(9, 8))
-        tree:add_le(price, buffer:range(17, 8))
-        tree:add_le(quantity, buffer:range(25, 4))
-        tree:add_le(liquidity, buffer:range(29, 1))
+        if hdr.version == 2 then
+            dissect_order_entry_fill_v2(buffer, pinfo, tree)
+        elseif hdr.version >= 3 then
+            dissect_order_entry_fill_v3(buffer, pinfo, tree)
+        end
     end
 end
 
-local function dissect_drop_copy(buffer, pinfo, tree)
+local function dissect_drop_copy(hdr, buffer, pinfo, tree)
     local mt_byte = buffer:range(0, 1)
     tree:add_le(drop_copy_message_type, mt_byte)
     local mt = mt_byte:string()
@@ -336,16 +320,17 @@ end
 
 local function dissect_levels(length, buffer, pinfo, tree)
     -- lua for loops still run the body once if begin == end
-    if length < 12 then
-        return
-    end
-    for i = 0, length, 12 do
-        tree:add_le(price, buffer:range(i, 8))
-        tree:add_le(quantity, buffer:range(i + 8, 4))
+    local count = math.floor(length / 12)
+    for i = 0, count do
+        if i ~= count then
+            lvl_tree = tree:add(btp_proto, buffer:range(i * 12, 12), "Level")
+            lvl_tree:add_le(price, buffer:range(i * 12, 8))
+            lvl_tree:add_le(quantity, buffer:range(i * 12 + 8, 4))
+        end
     end
 end
 
-local function dissect_pricefeed(buffer, pinfo, tree)
+local function dissect_pricefeed(hdr, buffer, pinfo, tree)
     local mt_byte = buffer:range(0, 1)
     tree:add_le(pricefeed_message_type, mt_byte)
     local mt = mt_byte:string()
@@ -370,21 +355,23 @@ local function dissect_pricefeed(buffer, pinfo, tree)
         tree:add_le(ack_id, buffer:range(1, 8))
         tree:add_le(product_id, buffer:range(9, 8))
 
-        tree:add_le(bids_length, buffer:range(17, 4))
-        local bid_length = buffer:range(17, 4):uint()
-        local buf = buffer:range(21, bid_length)
-        local subtree = tree:add_le(bid_levels, buf)
-        dissect_levels(bid_length, buf, pinfo, subtree)
+        local bid_length_range = buffer:range(17, 4)
+        tree:add_le(bids_length, bid_length_range)
+        local bid_length = bid_length_range:le_uint()
+        local bid_buf = buffer:range(21, bid_length)
+        local bid_tree = tree:add_le(bid_levels, bid_buf)
+        dissect_levels(bid_length, bid_buf, pinfo, bid_tree)
 
-        tree:add_le(asks_length, buffer:range(21 + bid_length, 4))
-        local ask_length = buffer:range(21 + bid_length, 4):uint()
-        local buf2 = buffer:range(21 + bid_length, ask_length)
-        local subtree2 = tree:add_le(ask_levels, buf2)
-        dissect_levels(ask_length, buf2, pinfo, subtree2)
+        local ask_length_range = buffer:range(21 + bid_length, 4)
+        tree:add_le(asks_length, ask_length_range)
+        local ask_length = ask_length_range:le_uint()
+        local ask_buf = buffer:range(25 + bid_length, ask_length)
+        local ask_tree = tree:add_le(ask_levels, ask_buf)
+        dissect_levels(ask_length, ask_buf, pinfo, ask_tree)
     end
 end
 
-local function dissect_login(buffer, pinfo, tree)
+local function dissect_login(hdr, buffer, pinfo, tree)
     local mt_byte = buffer:range(0, 1)
     tree:add_le(login_message_type, mt_byte)
     local mt = mt_byte:string()
@@ -401,17 +388,17 @@ local function dissect_login(buffer, pinfo, tree)
     end
 end
 
-local function dissect_market_state(buffer, pinfo, tree)
+local function dissect_market_state(hdr, buffer, pinfo, tree)
     tree:add_le(market_state, buffer:range(0, 1))
     tree:add_le(ack_id, buffer:range(1, 8))
     tree:add_le(product_id, buffer:range(9, 8))
 end
 
-local function dissect_heartbeat(buffer, pinfo, tree)
+local function dissect_heartbeat(hdr, buffer, pinfo, tree)
     -- this function intentionally left blank
 end
 
-local function dissect_disconnect(buffer, pinfo, tree)
+local function dissect_disconnect(hdr, buffer, pinfo, tree)
     tree:add_le(disconnect_reason, buffer:range(0, 1))
     tree:add_le(expected_sequence_id, buffer:range(1, 4))
     tree:add_le(actual_sequence_id, buffer:range(5, 4))
@@ -429,8 +416,11 @@ local body_dissectors = {
 }
 
 -- Invoke the body dissector for the given encoding type
-local function dissect_body(encoding, buffer, pinfo, tree)
-    body_dissectors[encoding](buffer, pinfo, tree)
+local function dissect_body(hdr, buffer, pinfo, tree)
+    local dissector = body_dissectors[hdr.encoding]
+    if dissector then
+        dissector(hdr, buffer, pinfo, tree)
+    end
 end
 
 -- List of BTP fields
@@ -492,17 +482,31 @@ function btp_proto.dissector(buffer, pinfo, tree)
 
     -- dissect header
     local subtree = tree:add(btp_proto, buffer:range(), "Bitnomial Trading Protocol")
-    local header = subtree:add_le(btp_proto, buffer:range(0, 12), "BTP Header")
-    header:add_le(protocol_id, buffer:range(0, 2))
-    header:add_le(version, buffer:range(2, 2))
-    header:add_le(sequence_id, buffer:range(4, 4))
-    header:add_le(body_encoding, buffer:range(8, 2))
-    header:add_le(body_length, buffer:range(10, 2))
+    local header_tree = subtree:add_le(btp_proto, buffer:range(0, 12), "BTP Header")
+    local protocol_id_range = buffer:range(0, 2)
+    header_tree:add_le(protocol_id, protocol_id_range)
+    local version_range = buffer:range(2, 2)
+    header_tree:add_le(version, version_range)
+    local seq_id_range = buffer:range(4, 4)
+    header_tree:add_le(sequence_id, seq_id_range)
+    local encoding_range = buffer:range(8, 2)
+    header_tree:add_le(body_encoding, encoding_range)
+    local len_range = buffer:range(10, 2)
+    header_tree:add_le(body_length, len_range)
+
+    -- store hdr content
+    local hdr = {
+        version = version_range:le_uint(),
+        encoding = encoding_range:string(),
+        protocol_id = protocol_id_range:le_uint(),
+        sequence_id = seq_id_range:le_uint(),
+        length = len_range:le_uint(),
+    }
 
     -- dissect body based on the encoding
-    local body = subtree:add_le(btp_proto, buffer:range(12), "BTP Body")
-    local encoding = buffer:range(8, 2):string()
-    dissect_body(encoding, buffer:range(12), pinfo, body)
+    local bdy_range = buffer:range(12)
+    local body = subtree:add_le(btp_proto, bdy_range, "BTP Body")
+    dissect_body(hdr, bdy_range, pinfo, body)
 end
 
 -- This function matches packets against a series of tests to determine whether
@@ -520,15 +524,9 @@ local function heuristic_checker(buffer, pinfo, tree)
         return false
     end
 
-    -- ensure that the protocol version is version 2
+    -- ensure that the protocol version is at least version 2
     local ver = buffer:range(2, 2):le_uint()
-    if ver ~= 0x0002 then
-        return false
-    end
-
-    -- ensure that the body encoding is valid
-    local encoding = buffer:range(8, 2):string()
-    if body_dissectors[encoding] == nil then
+    if ver < 0x0002 then
         return false
     end
 
