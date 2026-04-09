@@ -71,6 +71,7 @@ local time_in_force_string = {
 
 local order_entry_message_type_string = {
     [string.byte("O")] = "Open",
+    [string.byte("T")] = "Attributed Open",
     [string.byte("M")] = "Modify",
     [string.byte("A")] = "Ack",
     [string.byte("R")] = "Reject",
@@ -99,24 +100,24 @@ local login_message_type_string = {
     [string.byte("R")] = "Reject",
 }
 
-local function be2int(be)
-    if string.len(be) == 2 then
-        local a = string.byte(be, 1)
-        local b = string.byte(be, 2)
-        return bit32.bor(bit32.lshift(b, 8), a)
+local function le2int(le)
+    if string.len(le) == 2 then
+        local a = string.byte(le, 1)
+        local b = string.byte(le, 2)
+        return (b << 8) | a
     else
-        error("btp.lua:be2int expected a string of exactly 2 characters")
+        error("btp.lua:le2int expected a string of exactly 2 characters")
     end
 end
 
 local body_encoding_string = {
-    [be2int("OE")] = "Order Entry",
-    [be2int("DC")] = "Dropcopy",
-    [be2int("PF")] = "Pricefeed",
-    [be2int("LG")] = "Login",
-    [be2int("MS")] = "Market State",
-    [be2int("HB")] = "Heartbeat",
-    [be2int("DN")] = "Disconnect",
+    [le2int("OE")] = "Order Entry",
+    [le2int("DC")] = "Dropcopy",
+    [le2int("PF")] = "Pricefeed",
+    [le2int("LG")] = "Login",
+    [le2int("MS")] = "Market State",
+    [le2int("HB")] = "Heartbeat",
+    [le2int("DN")] = "Disconnect",
 }
 
 -- BTP header fields
@@ -156,6 +157,8 @@ local firm_name = ProtoField.string("btp.firm_name", "Firm Name", base.ASCII, ni
 local firm_type = ProtoField.uint8("btp.firm_type", "Firm Type", base.HEX, firm_type_string, nil, nil)
 local user_memo_len = ProtoField.uint8("btp.user_memo_len", "User Memo Length", base.DEC, nil, nil, nil)
 local user_memo = ProtoField.string("btp.user_memo", "User Memo", base.ASCII, nil)
+local clearing_firm_code_len = ProtoField.uint8("btp.clearing_firm_code_len", "Clearing Firm Code Length", base.DEC, nil, nil, nil)
+local clearing_firm_code = ProtoField.string("btp.clearing_firm_code", "Clearing Firm Code", base.ASCII, nil)
 local modify_id = ProtoField.uint64("btp.modify_id", "Modify ID", base.DEC, nil, nil, nil)
 local old_price = ProtoField.int64("btp.old_price", "Old Price", base.DEC, nil, nil, nil)
 local old_quantity = ProtoField.uint32("btp.old_quantity", "Old Quantity", base.DEC, nil, nil, nil)
@@ -196,8 +199,8 @@ local function dissect_order_entry_fill_v2(buffer, pinfo, tree)
 end
 
 local function dissect_order_entry_fill_v3(buffer, pinfo, tree)
-    tree:add_le(ack_id, buffer:range(1, 8))
-    tree:add_le(product_id, buffer:range(9, 8))
+    tree:add_le(product_id, buffer:range(1, 8))
+    tree:add_le(ack_id, buffer:range(9, 8))
     tree:add_le(order_id, buffer:range(17, 8))
     tree:add_le(price, buffer:range(25, 8))
     tree:add_le(quantity, buffer:range(33, 4))
@@ -215,6 +218,18 @@ local function dissect_order_entry(hdr, buffer, pinfo, tree)
         tree:add_le(price, buffer:range(18, 8))
         tree:add_le(quantity, buffer:range(26, 4))
         tree:add_le(time_in_force, buffer:range(30, 1))
+    elseif mt == "T" then
+        -- Attributed Open: same as Open + clearing firm code + account ID
+        tree:add_le(order_id, buffer:range(1, 8))
+        tree:add_le(product_id, buffer:range(9, 8))
+        tree:add_le(side, buffer:range(17, 1))
+        tree:add_le(price, buffer:range(18, 8))
+        tree:add_le(quantity, buffer:range(26, 4))
+        tree:add_le(time_in_force, buffer:range(30, 1))
+        tree:add_le(clearing_firm_code_len, buffer:range(31, 1))
+        tree:add_le(clearing_firm_code, buffer:range(32, 3))
+        tree:add_le(account_id_len, buffer:range(35, 1))
+        tree:add_le(account_id, buffer:range(36, 16))
     elseif mt == "M" then
         tree:add_le(order_id, buffer:range(1, 8))
         tree:add_le(modify_id, buffer:range(9, 8))
@@ -323,7 +338,7 @@ local function dissect_levels(length, buffer, pinfo, tree)
     local count = math.floor(length / 12)
     for i = 0, count do
         if i ~= count then
-            lvl_tree = tree:add(btp_proto, buffer:range(i * 12, 12), "Level")
+            local lvl_tree = tree:add(btp_proto, buffer:range(i * 12, 12), "Level")
             lvl_tree:add_le(price, buffer:range(i * 12, 8))
             lvl_tree:add_le(quantity, buffer:range(i * 12 + 8, 4))
         end
@@ -465,6 +480,8 @@ btp_proto.fields = {
     close_reason,
     order_entry_reject_reason,
     time_in_force,
+    clearing_firm_code_len,
+    clearing_firm_code,
     order_entry_message_type,
     drop_copy_message_type,
     pricefeed_message_type,
@@ -502,6 +519,9 @@ function btp_proto.dissector(buffer, pinfo, tree)
         sequence_id = seq_id_range:le_uint(),
         length = len_range:le_uint(),
     }
+
+    -- set info column to the encoding string
+    pinfo.cols.info = hdr.encoding
 
     -- dissect body based on the encoding
     local bdy_range = buffer:range(12)
